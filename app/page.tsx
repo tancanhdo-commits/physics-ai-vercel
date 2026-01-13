@@ -1,104 +1,44 @@
-import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+"use client";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { useState } from "react";
 
-export async function POST(req: NextRequest) {
-  try {
-    const { unit, lesson } = await req.json();
+export default function Home() {
+  const [unit, setUnit] = useState("");
+  const [lesson, setLesson] = useState("");
+  const [result, setResult] = useState<any>(null);
 
-    const systemPrompt = `
-You are an expert Vietnamese high school Physics teacher.
-You master the Vietnamese General Education Curriculum 2018 and the National High School Exam orientation.
-You create accurate, structured, exam-oriented Physics 12 content.
-All responses must be in Vietnamese.
-Always prioritize scientific correctness, clarity, and pedagogical value.
-`;
-
-    const userPrompt = `
-Create a Physics 12 lesson aligned with Vietnamese knowledge and skills standards.
-
-Subject: Physics
-Grade: 12
-Unit (Chapter): ${unit}
-Lesson: ${lesson}
-
-Output STRICTLY in JSON format:
-
-{
-  "metadata": {
-    "subject": "Vật lí",
-    "grade": "12",
-    "unit": "${unit}",
-    "lesson": "${lesson}",
-    "orientation": "Chuẩn kiến thức – kĩ năng & luyện thi THPT"
-  },
-  "slides": [
-    {
-      "slide_type": "theory",
-      "title": "Kiến thức trọng tâm",
-      "content": [
-        {
-          "concept": "",
-          "definition": "",
-          "formula": "",
-          "units": "",
-          "note": ""
-        }
-      ]
-    },
-    {
-      "slide_type": "exam_skills",
-      "title": "Kĩ năng giải bài tập",
-      "content": []
-    },
-    {
-      "slide_type": "worked_example",
-      "title": "Bài tập thực chiến",
-      "content": {
-        "question": "",
-        "analysis": "",
-        "solution_steps": [],
-        "final_answer": ""
-      }
-    },
-    {
-      "slide_type": "practice",
-      "title": "Bài tập tự luyện",
-      "content": []
-    },
-    {
-      "slide_type": "summary",
-      "title": "Tổng kết – ghi nhớ",
-      "content": []
-    }
-  ]
-}
-
-Rules:
-- Output ONLY valid JSON
-- No markdown, no emojis
-- Physics must be correct and exam-oriented
-`;
-
-    const completion = await client.chat.completions.create({
-      model: "gpt-4.1-mini",
-      temperature: 0.3,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
+  const generateLesson = async () => {
+    const res = await fetch("/api/generate-physics", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ unit, lesson }),
     });
 
-    const content = completion.choices[0].message.content;
+    const data = await res.json();
+    setResult(data);
+  };
 
-    return NextResponse.json(JSON.parse(content as string));
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: "Failed to generate lesson", details: error.message },
-      { status: 500 }
-    );
-  }
+  return (
+    <main style={{ padding: 24 }}>
+      <h1>Physics 12 AI Generator</h1>
+
+      <input
+        placeholder="Tên chương"
+        value={unit}
+        onChange={(e) => setUnit(e.target.value)}
+      />
+
+      <input
+        placeholder="Tên bài"
+        value={lesson}
+        onChange={(e) => setLesson(e.target.value)}
+      />
+
+      <button onClick={generateLesson}>
+        Generate
+      </button>
+
+      <pre>{JSON.stringify(result, null, 2)}</pre>
+    </main>
+  );
 }
